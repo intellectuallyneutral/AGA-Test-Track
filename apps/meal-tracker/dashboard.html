@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Isabelle's Tracker — Dashboard</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="dark-theme">
+
+<!-- Password Gate -->
+<div class="password-modal" id="password-modal">
+    <div class="card">
+        <div class="lock-icon">🔒</div>
+        <h2>Dashboard Access</h2>
+        <p style="color:var(--color-text-secondary)">Enter your password to view Isabelle's log.</p>
+        <form onsubmit="authenticate(event)">
+            <div class="form-group">
+                <input type="password" id="auth-password" class="form-input" placeholder="Password" required autofocus>
+            </div>
+            <button type="submit" class="btn-primary">Unlock Dashboard</button>
+        </form>
+    </div>
+</div>
+
+<!-- Dashboard Content (hidden until auth) -->
+<div class="page-container" id="dashboard-content" style="display:none;">
+    <!-- Print Header (only visible in PDF) -->
+    <div class="print-header">
+        <h1>Isabelle's Meal & Symptom Log</h1>
+        <p id="print-date-range"></p>
+    </div>
+
+    <header class="app-header" style="text-align:left;">
+        <h1 class="title">📋 Isabelle's Dashboard</h1>
+        <p class="subtitle">Meal, drink & symptom tracker</p>
+    </header>
+
+    <!-- Stats -->
+    <div class="stats-grid" id="stats-grid">
+        <div class="card stat-card">
+            <div class="icon meals">🍕</div>
+            <div><div class="value" id="stat-meals">-</div><p class="label">Foods logged</p></div>
+        </div>
+        <div class="card stat-card">
+            <div class="icon drinks">🧃</div>
+            <div><div class="value" id="stat-drinks">-</div><p class="label">Drinks logged</p></div>
+        </div>
+        <div class="card stat-card">
+            <div class="icon symptoms">🩺</div>
+            <div><div class="value" id="stat-symptoms">-</div><p class="label">Symptoms reported</p></div>
+        </div>
+        <div class="card stat-card">
+            <div class="icon people">👥</div>
+            <div><div class="value" id="stat-people">-</div><p class="label">Contributors</p></div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="date-filter">
+        <div class="form-group">
+            <label class="form-label" for="filter-start">From</label>
+            <input type="date" id="filter-start" class="form-input" onchange="loadData()">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="filter-end">To</label>
+            <input type="date" id="filter-end" class="form-input" onchange="loadData()">
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn-secondary" onclick="setQuickFilter('today')">Today</button>
+            <button class="btn-secondary" onclick="setQuickFilter('week')">7 Days</button>
+            <button class="btn-secondary" onclick="setQuickFilter('all')">All</button>
+            <button class="btn-export btn-primary" onclick="exportPDF()" style="width:auto;">📄 Export PDF</button>
+        </div>
+    </div>
+
+    <!-- View Toggle -->
+    <div class="section-title">
+        <h2>Activity Log</h2>
+        <div class="view-toggle">
+            <button class="active" onclick="setView('timeline', this)">Timeline</button>
+            <button onclick="setView('table', this)">Table</button>
+        </div>
+    </div>
+
+    <!-- Timeline View -->
+    <div id="timeline-view">
+        <div class="loading-spinner" id="loading"></div>
+        <div id="timeline-container"></div>
+    </div>
+
+    <!-- Table View -->
+    <div id="table-view" style="display:none;">
+        <div id="table-container"></div>
+    </div>
+
+    <!-- Symptom Correlations -->
+    <div id="correlations-section" style="margin-top:40px;">
+        <h2>🔗 Symptom ↔ Meal Correlations</h2>
+        <p style="color:var(--color-text-secondary);margin-bottom:20px;">Showing meals consumed within 8 hours before each symptom.</p>
+        <div id="correlations-container"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/timezone.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>

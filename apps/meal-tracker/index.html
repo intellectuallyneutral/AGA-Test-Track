@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Log Isabelle's meals, drinks, and symptoms">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>Isabelle's Food Tracker</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="light-theme">
+
+<div class="page-container form-container">
+    <!-- Header -->
+    <header class="app-header">
+        <div class="logo">🍽️</div>
+        <h1 class="title">Isabelle's Tracker</h1>
+        <p class="subtitle">Log food, drinks, or symptoms</p>
+    </header>
+
+    <!-- Tab Toggle -->
+    <div class="tab-group" role="tablist">
+        <button class="tab-btn active" role="tab" data-tab="entry" id="tab-entry" onclick="switchTab('entry')">🍽️ Food / Drink</button>
+        <button class="tab-btn" role="tab" data-tab="symptom" id="tab-symptom" onclick="switchTab('symptom')">🩺 Symptom</button>
+    </div>
+
+    <!-- Food/Drink Form -->
+    <form id="entry-form" class="card" onsubmit="submitEntry(event)">
+        <div class="form-group">
+            <label class="form-label" for="entry-name">Your Name</label>
+            <input type="text" id="entry-name" class="form-input" placeholder="e.g. Mom, Dad, Grandma" required>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Food or Drink?</label>
+            <div class="type-toggle">
+                <input type="radio" id="type-food" name="entry-type" value="food" checked>
+                <label for="type-food">🍕 Food</label>
+                <input type="radio" id="type-drink" name="entry-type" value="drink">
+                <label for="type-drink">🧃 Drink</label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="entry-item">What did Isabelle have?</label>
+            <input type="text" id="entry-item" class="form-input" placeholder="e.g. Grilled chicken, Apple juice" required>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="entry-portion">Portion Size <span style="font-weight:normal;color:var(--color-text-secondary)">(optional)</span></label>
+            <select id="entry-portion" class="form-select">
+                <option value="">— Select —</option>
+                <option value="small">Small</option>
+                <option value="medium">Medium</option>
+                <option value="large">Large</option>
+                <option value="a few bites">A few bites</option>
+                <option value="a few sips">A few sips</option>
+                <option value="full serving">Full serving</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="entry-datetime">Date &amp; Time (Eastern)</label>
+            <input type="datetime-local" id="entry-datetime" class="form-input" required>
+            <p class="form-hint">Auto-filled with current time. Change only if backlogging.</p>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="entry-notes">Notes <span style="font-weight:normal;color:var(--color-text-secondary)">(optional)</span></label>
+            <textarea id="entry-notes" class="form-textarea" placeholder="Any extra details..." rows="2"></textarea>
+        </div>
+
+        <button type="submit" class="btn-primary" id="btn-submit-entry">
+            <span id="entry-btn-text">Submit Entry</span>
+            <span id="entry-spinner" style="display:none;">Submitting...</span>
+        </button>
+    </form>
+
+    <!-- Symptom Form -->
+    <form id="symptom-form" class="card" style="display:none;" onsubmit="submitSymptom(event)">
+        <div class="form-group">
+            <label class="form-label" for="symptom-name">Your Name</label>
+            <input type="text" id="symptom-name" class="form-input" placeholder="e.g. Mom, Dad, Grandma" required>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="symptom-type">What symptom?</label>
+            <select id="symptom-type" class="form-select" required>
+                <option value="">— Select —</option>
+                <option value="acid reflux">Acid Reflux</option>
+                <option value="heartburn">Heartburn</option>
+                <option value="nausea">Nausea</option>
+                <option value="vomiting">Vomiting</option>
+                <option value="stomach pain">Stomach Pain</option>
+                <option value="bloating">Bloating</option>
+                <option value="coughing">Coughing</option>
+                <option value="sore throat">Sore Throat</option>
+                <option value="difficulty swallowing">Difficulty Swallowing</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+
+        <div class="form-group" id="symptom-other-group" style="display:none;">
+            <label class="form-label" for="symptom-other">Describe the symptom</label>
+            <input type="text" id="symptom-other" class="form-input" placeholder="What is she experiencing?">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">How severe?</label>
+            <div class="severity-selector">
+                <button type="button" class="severity-btn mild" onclick="selectSeverity(this, 'mild')">😊 Mild</button>
+                <button type="button" class="severity-btn moderate" onclick="selectSeverity(this, 'moderate')">😟 Moderate</button>
+                <button type="button" class="severity-btn severe" onclick="selectSeverity(this, 'severe')">😣 Severe</button>
+            </div>
+            <input type="hidden" id="symptom-severity" value="">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="symptom-datetime">Date &amp; Time (Eastern)</label>
+            <input type="datetime-local" id="symptom-datetime" class="form-input" required>
+            <p class="form-hint">Auto-filled with current time. Change only if backlogging.</p>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="symptom-notes">Notes <span style="font-weight:normal;color:var(--color-text-secondary)">(optional)</span></label>
+            <textarea id="symptom-notes" class="form-textarea" placeholder="Any extra details..." rows="2"></textarea>
+        </div>
+
+        <button type="submit" class="btn-primary" id="btn-submit-symptom">
+            <span id="symptom-btn-text">Submit Symptom</span>
+            <span id="symptom-spinner" style="display:none;">Submitting...</span>
+        </button>
+    </form>
+</div>
+
+<!-- Success Overlay -->
+<div class="success-overlay" id="success-overlay">
+    <div class="checkmark">✅</div>
+    <div class="message">Logged successfully!</div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/timezone.js"></script>
+<script src="js/form.js"></script>
+</body>
+</html>
