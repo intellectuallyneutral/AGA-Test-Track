@@ -12,5 +12,19 @@ const DASHBOARD_PASSWORD = 'isabelle2026';
 // Patient info for PDF reports
 const PATIENT_NAME = 'Isabelle';
 
-// Initialize Supabase client
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Initialize Supabase client (deferred to handle CDN load timing)
+let supabase;
+function initSupabase() {
+  if (window.supabase && window.supabase.createClient) {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    return true;
+  }
+  return false;
+}
+// Try immediately, retry if CDN still loading
+if (!initSupabase()) {
+  let attempts = 0;
+  const retryInit = setInterval(() => {
+    if (initSupabase() || ++attempts > 20) clearInterval(retryInit);
+  }, 200);
+}
