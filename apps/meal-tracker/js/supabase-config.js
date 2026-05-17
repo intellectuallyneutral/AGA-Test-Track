@@ -1,30 +1,36 @@
 // ============================================
 // Supabase Configuration
-// Replace these values after creating your Supabase project
 // ============================================
 
-const SUPABASE_URL = 'https://exztnkqtsbelwbcyznei.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4enRua3F0c2JlbHdiY3l6bmVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDYzMTgsImV4cCI6MjA5NDYyMjMxOH0.ukWUtk41Yw2xeu5KLPN4Lf9t_baTWTZHm0RtR30GY9A';
+var SUPABASE_URL = 'https://exztnkqtsbelwbcyznei.supabase.co';
+var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4enRua3F0c2JlbHdiY3l6bmVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDYzMTgsImV4cCI6MjA5NDYyMjMxOH0.ukWUtk41Yw2xeu5KLPN4Lf9t_baTWTZHm0RtR30GY9A';
 
 // Dashboard access password (change this to something secure)
-const DASHBOARD_PASSWORD = 'isabelle2026';
+var DASHBOARD_PASSWORD = 'isabelle2026';
 
 // Patient info for PDF reports
-const PATIENT_NAME = 'Isabelle';
+var PATIENT_NAME = 'Isabelle';
 
-// Initialize Supabase client (deferred to handle CDN load timing)
-let supabase;
+// Initialize Supabase client
+// Store the CDN library reference, then overwrite with client instance
+var _supabaseLib = null;
+var supabase = null;
+
 function initSupabase() {
-  if (window.supabase && window.supabase.createClient) {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  _supabaseLib = _supabaseLib || window.supabase;
+  if (_supabaseLib && _supabaseLib.createClient) {
+    supabase = _supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.supabase = supabase; // ensure global access
     return true;
   }
   return false;
 }
-// Try immediately, retry if CDN still loading
+
 if (!initSupabase()) {
-  let attempts = 0;
-  const retryInit = setInterval(() => {
-    if (initSupabase() || ++attempts > 20) clearInterval(retryInit);
+  var _initAttempts = 0;
+  var _initTimer = setInterval(function() {
+    if (initSupabase() || ++_initAttempts > 30) {
+      clearInterval(_initTimer);
+    }
   }, 200);
 }
