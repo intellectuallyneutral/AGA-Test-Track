@@ -5,6 +5,7 @@
 let allEntries = [];
 let allSymptoms = [];
 let currentView = 'timeline';
+let selectedItems = new Set(); // tracks "entry:id" or "symptom:id"
 
 // --- Authentication ---
 function authenticate(e) {
@@ -21,18 +22,15 @@ function authenticate(e) {
 
 // --- Initialize ---
 function initDashboard() {
-  // Default filter: last 7 days
   setQuickFilter('week');
 }
 
 // --- Quick Date Filters ---
 function setQuickFilter(range) {
   const now = new Date();
-  // Get today's date in Eastern Time as YYYY-MM-DD, then parse parts manually
-  // to avoid new Date('YYYY-MM-DD') UTC interpretation bug
   const etDateStr = now.toLocaleString('en-CA', { timeZone: 'America/New_York' }).split(',')[0];
   const [y, m, d] = etDateStr.split('-').map(Number);
-  const end = new Date(y, m - 1, d); // local date, not UTC
+  const end = new Date(y, m - 1, d);
   let start;
 
   if (range === 'today') {
@@ -68,7 +66,6 @@ async function loadData() {
   document.getElementById('table-container').innerHTML = '';
   document.getElementById('correlations-container').innerHTML = '';
 
-  // Build date range in UTC (start of day ET -> UTC, end of day ET -> UTC)
   const startISO = easternInputToISO(startDate + 'T00:00');
   const endISO = easternInputToISO(endDate + 'T23:59');
 
@@ -85,6 +82,8 @@ async function loadData() {
     allEntries = entriesRes.data || [];
     allSymptoms = symptomsRes.data || [];
 
+    selectedItems.clear();
+    updateDeleteBar();
     updateStats();
     renderTimeline();
     renderTable();
@@ -119,11 +118,94 @@ function setView(view, btn) {
   document.getElementById('table-view').style.display = view === 'table' ? 'block' : 'none';
 }
 
+// ============================================
+// Selection & Delete
+// ============================================
+
+function toggleSelect(type, id) {
+  const key = type + ':' + id;
+  if (selectedItems.has(key)) {
+    selectedItems.delete(key);
+  } else {
+    selectedItems.add(key);
+  }
+  updateDeleteBar();
+  const cb = document.querySelector(`input[data-key="${key}"]`);
+  if (cb) cb.checked = selectedItems.has(key);
+}
+
+function selectAll() {
+  const allItems = [
+    ...allEntries.map(e => 'entry:' + e.id),
+    ...allSymptoms.map(s => 'symptom:' + s.id)
+  ];
+
+  if (selectedItems.size === allItems.length) {
+    selectedItems.clear();
+  } else {
+    allItems.forEach(k => selectedItems.add(k));
+  }
+
+  document.querySelectorAll('.item-checkbox').forEach(cb => {
+    cb.checked = selectedItems.has(cb.dataset.key);
+  });
+  updateDeleteBar();
+}
+
+function updateDeleteBar() {
+  const bar = document.getElementById('delete-bar');
+  const count = selectedItems.size;
+  if (count > 0) {
+    bar.style.display = 'flex';
+    document.getElementById('delete-count').textContent = count + ' selected';
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+async function deleteSelected() {
+  const count = selectedItems.size;
+  if (count === 0) return;
+
+  if (!confirm(`Delete ${count} item(s)? This cannot be undone.`)) return;
+
+  const entryIds = [];
+  const symptomIds = [];
+  selectedItems.forEach(key => {
+    const [type, id] = key.split(':');
+    if (type === 'entry') entryIds.push(id);
+    else symptomIds.push(id);
+  });
+
+  try {
+    const db = await getSupabase();
+    const promises = [];
+    if (entryIds.length > 0) {
+      promises.push(db.from('entries').delete().in('id', entryIds));
+    }
+    if (symptomIds.length > 0) {
+      promises.push(db.from('symptoms').delete().in('id', symptomIds));
+    }
+
+    const results = await Promise.all(promises);
+    const errors = results.filter(r => r.error);
+    if (errors.length > 0) {
+      throw new Error(errors.map(e => e.error.message).join(', '));
+    }
+
+    selectedItems.clear();
+    updateDeleteBar();
+    await loadData();
+  } catch (err) {
+    console.error('Delete error:', err);
+    alert('Failed to delete: ' + err.message);
+  }
+}
+
 // --- Render Timeline ---
 function renderTimeline() {
   const container = document.getElementById('timeline-container');
 
-  // Merge entries and symptoms into one sorted list
   const items = [
     ...allEntries.map(e => ({ ...e, _type: 'entry', _time: e.entry_time })),
     ...allSymptoms.map(s => ({ ...s, _type: 'symptom', _time: s.symptom_time }))
@@ -134,7 +216,6 @@ function renderTimeline() {
     return;
   }
 
-  // Group by date
   const grouped = {};
   items.forEach(item => {
     const dateKey = formatEasternDate(item._time);
@@ -146,35 +227,45 @@ function renderTimeline() {
   for (const [date, dateItems] of Object.entries(grouped)) {
     html += `<div class="timeline-date">${date}</div>`;
     dateItems.forEach(item => {
+      const key = item._type + ':' + item.id;
+      const checked = selectedItems.has(key) ? 'checked' : '';
+      const checkboxHtml = `<label class="item-select-label"><input type="checkbox" class="item-checkbox" data-key="${key}" ${checked} onchange="toggleSelect('${item._type}','${item.id}')"></label>`;
+
       if (item._type === 'entry') {
         const typeEmoji = item.entry_type === 'food' ? '🍕' : '🥤';
         const typeClass = item.entry_type;
         html += `
           <div class="timeline-item">
-            <div class="item-header">
-              <span class="item-name">${typeEmoji} ${escapeHtml(item.item_name)}</span>
-              <span class="item-time">${formatEasternTime(item.entry_time)}</span>
+            ${checkboxHtml}
+            <div class="item-content">
+              <div class="item-header">
+                <span class="item-name">${typeEmoji} ${escapeHtml(item.item_name)}</span>
+                <span class="item-time">${formatEasternTime(item.entry_time)}</span>
+              </div>
+              <div class="item-meta">
+                <span class="badge ${typeClass}">${item.entry_type}</span>
+                ${item.portion_size ? `<span class="badge">${item.portion_size}</span>` : ''}
+                <span class="badge submitter">by ${escapeHtml(item.submitter_name)}</span>
+              </div>
+              ${item.notes ? `<div class="item-notes">${escapeHtml(item.notes)}</div>` : ''}
             </div>
-            <div class="item-meta">
-              <span class="badge ${typeClass}">${item.entry_type}</span>
-              ${item.portion_size ? `<span class="badge">${item.portion_size}</span>` : ''}
-              <span class="badge submitter">by ${escapeHtml(item.submitter_name)}</span>
-            </div>
-            ${item.notes ? `<div class="item-notes">${escapeHtml(item.notes)}</div>` : ''}
           </div>`;
       } else {
         html += `
           <div class="timeline-item symptom-item">
-            <div class="item-header">
-              <span class="item-name">🩺 ${escapeHtml(item.symptom_type)}</span>
-              <span class="item-time">${formatEasternTime(item.symptom_time)}</span>
+            ${checkboxHtml}
+            <div class="item-content">
+              <div class="item-header">
+                <span class="item-name">🩺 ${escapeHtml(item.symptom_type)}</span>
+                <span class="item-time">${formatEasternTime(item.symptom_time)}</span>
+              </div>
+              <div class="item-meta">
+                <span class="badge symptom">symptom</span>
+                <span class="badge ${item.severity}">${item.severity}</span>
+                <span class="badge submitter">by ${escapeHtml(item.submitter_name)}</span>
+              </div>
+              ${item.notes ? `<div class="item-notes">${escapeHtml(item.notes)}</div>` : ''}
             </div>
-            <div class="item-meta">
-              <span class="badge symptom">symptom</span>
-              <span class="badge ${item.severity}">${item.severity}</span>
-              <span class="badge submitter">by ${escapeHtml(item.submitter_name)}</span>
-            </div>
-            ${item.notes ? `<div class="item-notes">${escapeHtml(item.notes)}</div>` : ''}
           </div>`;
       }
     });
@@ -188,8 +279,8 @@ function renderTable() {
   const container = document.getElementById('table-container');
 
   const items = [
-    ...allEntries.map(e => ({ time: e.entry_time, type: e.entry_type, name: e.item_name, detail: e.portion_size || '\u2014', severity: '\u2014', submitter: e.submitter_name, notes: e.notes || '' })),
-    ...allSymptoms.map(s => ({ time: s.symptom_time, type: 'symptom', name: s.symptom_type, detail: '\u2014', severity: s.severity, submitter: s.submitter_name, notes: s.notes || '' }))
+    ...allEntries.map(e => ({ id: e.id, _type: 'entry', time: e.entry_time, type: e.entry_type, name: e.item_name, detail: e.portion_size || '—', severity: '—', submitter: e.submitter_name, notes: e.notes || '' })),
+    ...allSymptoms.map(s => ({ id: s.id, _type: 'symptom', time: s.symptom_time, type: 'symptom', name: s.symptom_type, detail: '—', severity: s.severity, submitter: s.submitter_name, notes: s.notes || '' }))
   ].sort((a, b) => new Date(b.time) - new Date(a.time));
 
   if (items.length === 0) {
@@ -199,11 +290,15 @@ function renderTable() {
 
   let html = `<table class="data-table">
     <thead><tr>
+      <th style="width:40px;"><input type="checkbox" onchange="selectAll()" title="Select all"></th>
       <th>Date/Time (ET)</th><th>Type</th><th>Item</th><th>Portion/Severity</th><th>Submitted By</th><th>Notes</th>
     </tr></thead><tbody>`;
 
   items.forEach(item => {
+    const key = item._type + ':' + item.id;
+    const checked = selectedItems.has(key) ? 'checked' : '';
     html += `<tr>
+      <td><input type="checkbox" class="item-checkbox" data-key="${key}" ${checked} onchange="toggleSelect('${item._type}','${item.id}')"></td>
       <td>${formatEastern(item.time)}</td>
       <td><span class="badge ${item.type}">${item.type}</span></td>
       <td>${escapeHtml(item.name)}</td>
@@ -226,8 +321,7 @@ function renderCorrelations() {
     return;
   }
 
-  // For each symptom, find meals within 8 hours before
-  const WINDOW_MS = 8 * 60 * 60 * 1000; // 8 hours
+  const WINDOW_MS = 8 * 60 * 60 * 1000;
   let html = '';
 
   allSymptoms.forEach(symptom => {
@@ -245,7 +339,7 @@ function renderCorrelations() {
           <div>
             <h3 style="margin-bottom:4px;">🩺 ${escapeHtml(symptom.symptom_type)} <span class="badge ${symptom.severity}">${symptom.severity}</span></h3>
             <p style="margin:0;font-size:0.9rem;color:var(--color-text-secondary);">
-              ${formatEastern(symptom.symptom_time)} \u00B7 reported by ${escapeHtml(symptom.submitter_name)}
+              ${formatEastern(symptom.symptom_time)} · reported by ${escapeHtml(symptom.submitter_name)}
             </p>
             ${symptom.notes ? `<p style="margin:4px 0 0;font-size:0.85rem;color:var(--color-text-secondary);font-style:italic;">"${escapeHtml(symptom.notes)}"</p>` : ''}
           </div>
@@ -278,7 +372,13 @@ function renderCorrelations() {
 function exportPDF() {
   const start = document.getElementById('filter-start').value;
   const end = document.getElementById('filter-end').value;
-  document.getElementById('print-date-range').textContent = `Report period: ${start} to ${end} \u00B7 Generated ${new Date().toLocaleDateString('en-US')}`;
+  document.getElementById('print-date-range').textContent = `Report period: ${start} to ${end} · Generated ${new Date().toLocaleDateString('en-US')}`;
+
+  // Temporarily hide delete bar and checkboxes for clean PDF
+  const deleteBar = document.getElementById('delete-bar');
+  const checkboxes = document.querySelectorAll('.item-select-label, .data-table th:first-child, .data-table td:first-child');
+  deleteBar.style.display = 'none';
+  checkboxes.forEach(el => el.style.display = 'none');
 
   const element = document.getElementById('dashboard-content');
 
@@ -291,7 +391,10 @@ function exportPDF() {
     pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
   };
 
-  html2pdf().set(opt).from(element).save();
+  html2pdf().set(opt).from(element).save().then(function() {
+    checkboxes.forEach(el => el.style.display = '');
+    updateDeleteBar();
+  });
 }
 
 // --- Utility ---

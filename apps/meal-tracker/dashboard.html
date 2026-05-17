@@ -44,7 +44,7 @@
             <div><div class="value" id="stat-meals">-</div><p class="label">Foods logged</p></div>
         </div>
         <div class="card stat-card">
-            <div class="icon drinks">🧃</div>
+            <div class="icon drinks">🥤</div>
             <div><div class="value" id="stat-drinks">-</div><p class="label">Drinks logged</p></div>
         </div>
         <div class="card stat-card">
@@ -101,6 +101,12 @@
         <p style="color:var(--color-text-secondary);margin-bottom:20px;">Showing meals consumed within 8 hours before each symptom.</p>
         <div id="correlations-container"></div>
     </div>
+</div>
+
+<!-- Floating Delete Bar -->
+<div class="delete-bar" id="delete-bar" style="display:none;">
+    <span id="delete-count">0 selected</span>
+    <button class="btn-delete" onclick="deleteSelected()">🗑️ Delete Selected</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
