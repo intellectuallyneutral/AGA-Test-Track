@@ -28,7 +28,11 @@ function initDashboard() {
 // --- Quick Date Filters ---
 function setQuickFilter(range) {
   const now = new Date();
-  const end = new Date(now.toLocaleString('en-CA', { timeZone: 'America/New_York' }).split(',')[0]);
+  // Get today's date in Eastern Time as YYYY-MM-DD, then parse parts manually
+  // to avoid new Date('YYYY-MM-DD') UTC interpretation bug
+  const etDateStr = now.toLocaleString('en-CA', { timeZone: 'America/New_York' }).split(',')[0];
+  const [y, m, d] = etDateStr.split('-').map(Number);
+  const end = new Date(y, m - 1, d); // local date, not UTC
   let start;
 
   if (range === 'today') {
@@ -235,7 +239,6 @@ function renderCorrelations() {
       return entryTime >= windowStart && entryTime <= symptomTime;
     }).sort((a, b) => new Date(b.entry_time) - new Date(a.entry_time));
 
-    // Also check for meals outside current filter range (fetch separately if needed)
     html += `
       <div class="card correlation-card" style="margin-bottom:16px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
@@ -273,7 +276,6 @@ function renderCorrelations() {
 
 // --- PDF Export ---
 function exportPDF() {
-  // Set print date range
   const start = document.getElementById('filter-start').value;
   const end = document.getElementById('filter-end').value;
   document.getElementById('print-date-range').textContent = `Report period: ${start} to ${end} \u00B7 Generated ${new Date().toLocaleDateString('en-US')}`;
