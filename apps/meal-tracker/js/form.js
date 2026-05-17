@@ -84,7 +84,8 @@ async function submitEntry(e) {
   setSubmitting('entry', true);
 
   try {
-    const { error } = await supabase.from('entries').insert({
+    const db = await getSupabase();
+    const { error } = await db.from('entries').insert({
       entry_time: entryTimeISO,
       submitter_name: name,
       entry_type: entryType,
@@ -139,7 +140,8 @@ async function submitSymptom(e) {
   setSubmitting('symptom', true);
 
   try {
-    const { error } = await supabase.from('symptoms').insert({
+    const db = await getSupabase();
+    const { error } = await db.from('symptoms').insert({
       symptom_time: symptomTimeISO,
       submitter_name: name,
       symptom_type: symptomType,

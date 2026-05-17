@@ -69,9 +69,10 @@ async function loadData() {
   const endISO = easternInputToISO(endDate + 'T23:59');
 
   try {
+    const db = await getSupabase();
     const [entriesRes, symptomsRes] = await Promise.all([
-      supabase.from('entries').select('*').gte('entry_time', startISO).lte('entry_time', endISO).order('entry_time', { ascending: false }),
-      supabase.from('symptoms').select('*').gte('symptom_time', startISO).lte('symptom_time', endISO).order('symptom_time', { ascending: false })
+      db.from('entries').select('*').gte('entry_time', startISO).lte('entry_time', endISO).order('entry_time', { ascending: false }),
+      db.from('symptoms').select('*').gte('symptom_time', startISO).lte('symptom_time', endISO).order('symptom_time', { ascending: false })
     ]);
 
     if (entriesRes.error) throw entriesRes.error;
@@ -118,6 +119,7 @@ function setView(view, btn) {
 function renderTimeline() {
   const container = document.getElementById('timeline-container');
 
+  // Merge entries and symptoms into one sorted list
   const items = [
     ...allEntries.map(e => ({ ...e, _type: 'entry', _time: e.entry_time })),
     ...allSymptoms.map(s => ({ ...s, _type: 'symptom', _time: s.symptom_time }))
@@ -128,6 +130,7 @@ function renderTimeline() {
     return;
   }
 
+  // Group by date
   const grouped = {};
   items.forEach(item => {
     const dateKey = formatEasternDate(item._time);
@@ -140,7 +143,7 @@ function renderTimeline() {
     html += `<div class="timeline-date">${date}</div>`;
     dateItems.forEach(item => {
       if (item._type === 'entry') {
-        const typeEmoji = item.entry_type === 'food' ? '🍕' : '🧃';
+        const typeEmoji = item.entry_type === 'food' ? '🍕' : '🥤';
         const typeClass = item.entry_type;
         html += `
           <div class="timeline-item">
@@ -181,8 +184,8 @@ function renderTable() {
   const container = document.getElementById('table-container');
 
   const items = [
-    ...allEntries.map(e => ({ time: e.entry_time, type: e.entry_type, name: e.item_name, detail: e.portion_size || '—', severity: '—', submitter: e.submitter_name, notes: e.notes || '' })),
-    ...allSymptoms.map(s => ({ time: s.symptom_time, type: 'symptom', name: s.symptom_type, detail: '—', severity: s.severity, submitter: s.submitter_name, notes: s.notes || '' }))
+    ...allEntries.map(e => ({ time: e.entry_time, type: e.entry_type, name: e.item_name, detail: e.portion_size || '\u2014', severity: '\u2014', submitter: e.submitter_name, notes: e.notes || '' })),
+    ...allSymptoms.map(s => ({ time: s.symptom_time, type: 'symptom', name: s.symptom_type, detail: '\u2014', severity: s.severity, submitter: s.submitter_name, notes: s.notes || '' }))
   ].sort((a, b) => new Date(b.time) - new Date(a.time));
 
   if (items.length === 0) {
@@ -219,7 +222,8 @@ function renderCorrelations() {
     return;
   }
 
-  const WINDOW_MS = 8 * 60 * 60 * 1000;
+  // For each symptom, find meals within 8 hours before
+  const WINDOW_MS = 8 * 60 * 60 * 1000; // 8 hours
   let html = '';
 
   allSymptoms.forEach(symptom => {
@@ -231,13 +235,14 @@ function renderCorrelations() {
       return entryTime >= windowStart && entryTime <= symptomTime;
     }).sort((a, b) => new Date(b.entry_time) - new Date(a.entry_time));
 
+    // Also check for meals outside current filter range (fetch separately if needed)
     html += `
       <div class="card correlation-card" style="margin-bottom:16px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
           <div>
             <h3 style="margin-bottom:4px;">🩺 ${escapeHtml(symptom.symptom_type)} <span class="badge ${symptom.severity}">${symptom.severity}</span></h3>
             <p style="margin:0;font-size:0.9rem;color:var(--color-text-secondary);">
-              ${formatEastern(symptom.symptom_time)} · reported by ${escapeHtml(symptom.submitter_name)}
+              ${formatEastern(symptom.symptom_time)} \u00B7 reported by ${escapeHtml(symptom.submitter_name)}
             </p>
             ${symptom.notes ? `<p style="margin:4px 0 0;font-size:0.85rem;color:var(--color-text-secondary);font-style:italic;">"${escapeHtml(symptom.notes)}"</p>` : ''}
           </div>
@@ -251,7 +256,7 @@ function renderCorrelations() {
     } else {
       correlatedMeals.forEach(meal => {
         const diff = timeDiffReadable(meal.entry_time, symptom.symptom_time);
-        const emoji = meal.entry_type === 'food' ? '🍕' : '🧃';
+        const emoji = meal.entry_type === 'food' ? '🍕' : '🥤';
         html += `
           <div class="correlation-item">
             <span>${emoji} ${escapeHtml(meal.item_name)} ${meal.portion_size ? `(${meal.portion_size})` : ''} <span class="badge submitter">${escapeHtml(meal.submitter_name)}</span></span>
@@ -268,9 +273,10 @@ function renderCorrelations() {
 
 // --- PDF Export ---
 function exportPDF() {
+  // Set print date range
   const start = document.getElementById('filter-start').value;
   const end = document.getElementById('filter-end').value;
-  document.getElementById('print-date-range').textContent = `Report period: ${start} to ${end} \u00b7 Generated ${new Date().toLocaleDateString('en-US')}`;
+  document.getElementById('print-date-range').textContent = `Report period: ${start} to ${end} \u00B7 Generated ${new Date().toLocaleDateString('en-US')}`;
 
   const element = document.getElementById('dashboard-content');
 
