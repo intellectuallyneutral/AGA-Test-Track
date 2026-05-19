@@ -3,9 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="robots" content="noindex, nofollow">
-    <title>Isabelle's Tracker — Dashboard</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="description" content="Admin dashboard for Isabelle's meal, medicine, and symptom tracker">
+    <title>Dashboard — Isabelle's Tracker</title>
+    <meta name="theme-color" content="#3B82F6">
+    <link rel="stylesheet" href="css/styles.css?v=2">
 </head>
 <body class="dark-theme">
 
@@ -14,105 +18,126 @@
     <div class="card">
         <div class="lock-icon">🔒</div>
         <h2>Dashboard Access</h2>
-        <p style="color:var(--color-text-secondary)">Enter your password to view Isabelle's log.</p>
+        <p>Enter the admin password to continue.</p>
         <form onsubmit="authenticate(event)">
             <div class="form-group">
                 <input type="password" id="auth-password" class="form-input" placeholder="Password" required autofocus>
             </div>
-            <button type="submit" class="btn-primary">Unlock Dashboard</button>
+            <button type="submit" class="btn-primary">Unlock</button>
         </form>
     </div>
 </div>
 
-<!-- Dashboard Content (hidden until auth) -->
-<div class="page-container" id="dashboard-content" style="display:none;">
-    <!-- Print Header (only visible in PDF) -->
-    <div class="print-header">
-        <h1>Isabelle's Meal & Symptom Log</h1>
-        <p id="print-date-range"></p>
-    </div>
+<!-- Dashboard Content -->
+<div id="dashboard-content" style="display:none;">
+    <div class="page-container">
 
-    <header class="app-header" style="text-align:left;">
-        <h1 class="title">📋 Isabelle's Dashboard</h1>
-        <p class="subtitle">Meal, drink & symptom tracker</p>
-    </header>
+        <!-- Print Header -->
+        <div class="print-header">
+            <h1>Isabelle's Tracker Report</h1>
+            <p id="print-date-range"></p>
+        </div>
 
-    <!-- Stats -->
-    <div class="stats-grid" id="stats-grid">
-        <div class="card stat-card">
-            <div class="icon meals">🍕</div>
-            <div><div class="value" id="stat-meals">-</div><p class="label">Foods logged</p></div>
-        </div>
-        <div class="card stat-card">
-            <div class="icon drinks">🥤</div>
-            <div><div class="value" id="stat-drinks">-</div><p class="label">Drinks logged</p></div>
-        </div>
-        <div class="card stat-card">
-            <div class="icon symptoms">🩺</div>
-            <div><div class="value" id="stat-symptoms">-</div><p class="label">Symptoms reported</p></div>
-        </div>
-        <div class="card stat-card">
-            <div class="icon people">👥</div>
-            <div><div class="value" id="stat-people">-</div><p class="label">Contributors</p></div>
-        </div>
-    </div>
+        <header class="app-header" style="text-align:left;padding-bottom:0;">
+            <h1 class="title">📊 Dashboard</h1>
+            <p class="subtitle">View and manage Isabelle's tracker data</p>
+        </header>
 
-    <!-- Filters -->
-    <div class="date-filter">
-        <div class="form-group">
-            <label class="form-label" for="filter-start">From</label>
-            <input type="date" id="filter-start" class="form-input" onchange="loadData()">
-        </div>
-        <div class="form-group">
-            <label class="form-label" for="filter-end">To</label>
-            <input type="date" id="filter-end" class="form-input" onchange="loadData()">
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <!-- Date Filter -->
+        <div class="date-filter">
+            <div class="form-group">
+                <label class="form-label" for="filter-start">From</label>
+                <input type="date" id="filter-start" class="form-input">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="filter-end">To</label>
+                <input type="date" id="filter-end" class="form-input">
+            </div>
+            <button class="btn-secondary" onclick="loadData()">Apply</button>
             <button class="btn-secondary" onclick="setQuickFilter('today')">Today</button>
             <button class="btn-secondary" onclick="setQuickFilter('week')">7 Days</button>
             <button class="btn-secondary" onclick="setQuickFilter('all')">All</button>
-            <button class="btn-export btn-primary" onclick="exportPDF()" style="width:auto;">📄 Export PDF</button>
+            <button class="btn-export" onclick="exportPDF()">📄 Export PDF</button>
         </div>
-    </div>
 
-    <!-- View Toggle -->
-    <div class="section-title">
-        <h2>Activity Log</h2>
-        <div class="view-toggle">
-            <button class="active" onclick="setView('timeline', this)">Timeline</button>
-            <button onclick="setView('table', this)">Table</button>
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="card stat-card">
+                <div class="icon meals">🍕</div>
+                <div>
+                    <div class="value" id="stat-meals">0</div>
+                    <p class="label">Foods</p>
+                </div>
+            </div>
+            <div class="card stat-card">
+                <div class="icon drinks">🥤</div>
+                <div>
+                    <div class="value" id="stat-drinks">0</div>
+                    <p class="label">Drinks</p>
+                </div>
+            </div>
+            <div class="card stat-card">
+                <div class="icon medicines">💊</div>
+                <div>
+                    <div class="value" id="stat-medicines">0</div>
+                    <p class="label">Medicines</p>
+                </div>
+            </div>
+            <div class="card stat-card">
+                <div class="icon symptoms">🩺</div>
+                <div>
+                    <div class="value" id="stat-symptoms">0</div>
+                    <p class="label">Symptoms</p>
+                </div>
+            </div>
+            <div class="card stat-card">
+                <div class="icon people">👥</div>
+                <div>
+                    <div class="value" id="stat-people">0</div>
+                    <p class="label">Contributors</p>
+                </div>
+            </div>
         </div>
-    </div>
 
-    <!-- Timeline View -->
-    <div id="timeline-view">
-        <div class="loading-spinner" id="loading"></div>
-        <div id="timeline-container"></div>
-    </div>
+        <!-- View Toggle -->
+        <div class="section-title">
+            <h2>Activity Log</h2>
+            <div class="view-toggle">
+                <button class="active" onclick="setView('timeline', this)">Timeline</button>
+                <button onclick="setView('table', this)">Table</button>
+            </div>
+        </div>
 
-    <!-- Table View -->
-    <div id="table-view" style="display:none;">
-        <div id="table-container"></div>
-    </div>
+        <div class="loading-spinner" id="loading" style="display:none;"></div>
 
-    <!-- Symptom Correlations -->
-    <div id="correlations-section" style="margin-top:40px;">
-        <h2>🔗 Symptom ↔ Meal Correlations</h2>
-        <p style="color:var(--color-text-secondary);margin-bottom:20px;">Showing meals consumed within 8 hours before each symptom.</p>
+        <div id="timeline-view">
+            <div id="timeline-container"></div>
+        </div>
+        <div id="table-view" style="display:none;">
+            <div id="table-container"></div>
+        </div>
+
+        <!-- Correlations -->
+        <div class="section-title" style="margin-top:48px;">
+            <h2>🔍 Symptom-Meal Correlations</h2>
+        </div>
         <div id="correlations-container"></div>
+
     </div>
 </div>
 
-<!-- Floating Delete Bar -->
+<!-- Delete Bar -->
 <div class="delete-bar" id="delete-bar" style="display:none;">
     <span id="delete-count">0 selected</span>
-    <button class="btn-delete" onclick="deleteSelected()">🗑️ Delete Selected</button>
+    <button class="btn-delete" onclick="deleteSelected()">🗑️ Delete</button>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<script src="js/supabase-config.js"></script>
-<script src="js/timezone.js"></script>
-<script src="js/dashboard.js"></script>
+<script src="js/supabase-config.js?v=2"></script>
+<script src="js/timezone.js?v=2"></script>
+<script src="js/dashboard.js?v=2"></script>
 </body>
 </html>
