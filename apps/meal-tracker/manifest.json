@@ -1,7 +1,7 @@
 {
   "name": "Isabelle's Food Tracker",
   "short_name": "Isabelle's Tracker",
-  "description": "Log meals, drinks, and symptoms for Isabelle",
+  "description": "Log meals, drinks, medicines, and symptoms for Isabelle",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#F8FAFC",
