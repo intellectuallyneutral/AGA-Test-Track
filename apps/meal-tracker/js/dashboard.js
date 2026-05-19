@@ -178,7 +178,7 @@ async function deleteSelected() {
   });
 
   try {
-    const db = await getSupabase();
+    const db = await getAdminSupabase();
     const promises = [];
     if (entryIds.length > 0) {
       promises.push(db.from('entries').delete().in('id', entryIds));
