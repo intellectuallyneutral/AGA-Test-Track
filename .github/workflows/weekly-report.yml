@@ -1,0 +1,36 @@
+name: Weekly Report Email
+
+on:
+  schedule:
+    - cron: '0 22 * * 5'
+  workflow_dispatch:
+    inputs:
+      recipient_override:
+        description: 'Override recipient email (for testing)'
+        required: false
+        type: string
+
+jobs:
+  send-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: apps/meal-tracker/scripts
+        run: npm install
+
+      - name: Send Weekly Report
+        working-directory: apps/meal-tracker/scripts
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          RECIPIENT_EMAIL: ${{ inputs.recipient_override || 'zen.hannah1113@gmail.com' }}
+        run: node send-weekly-report.js
