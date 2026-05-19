@@ -8,20 +8,26 @@ document.addEventListener('DOMContentLoaded', () => {
   const now = getCurrentEasternForInput();
   document.getElementById('entry-datetime').value = now;
   document.getElementById('symptom-datetime').value = now;
+  document.getElementById('medicine-datetime').value = now;
 
   // Restore remembered name from localStorage
   const savedName = localStorage.getItem('tracker_submitter_name');
   if (savedName) {
     document.getElementById('entry-name').value = savedName;
     document.getElementById('symptom-name').value = savedName;
+    document.getElementById('medicine-name').value = savedName;
   }
 
-  // Sync names between forms
-  document.getElementById('entry-name').addEventListener('input', (e) => {
-    document.getElementById('symptom-name').value = e.target.value;
-  });
-  document.getElementById('symptom-name').addEventListener('input', (e) => {
-    document.getElementById('entry-name').value = e.target.value;
+  // Sync names between all forms
+  const nameFields = ['entry-name', 'symptom-name', 'medicine-name'];
+  nameFields.forEach(fieldId => {
+    document.getElementById(fieldId).addEventListener('input', (e) => {
+      nameFields.forEach(otherId => {
+        if (otherId !== fieldId) {
+          document.getElementById(otherId).value = e.target.value;
+        }
+      });
+    });
   });
 
   // Show/hide "other" symptom field
@@ -34,6 +40,17 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('symptom-other').removeAttribute('required');
     }
   });
+
+  // Show/hide "other" medicine field
+  document.getElementById('medicine-type').addEventListener('change', (e) => {
+    const otherGroup = document.getElementById('medicine-other-group');
+    otherGroup.style.display = e.target.value === 'other' ? 'block' : 'none';
+    if (e.target.value === 'other') {
+      document.getElementById('medicine-other').setAttribute('required', 'required');
+    } else {
+      document.getElementById('medicine-other').removeAttribute('required');
+    }
+  });
 });
 
 // --- Tab Switching ---
@@ -41,15 +58,14 @@ function switchTab(tab) {
   document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
 
-  if (tab === 'entry') {
-    document.getElementById('entry-form').style.display = 'block';
-    document.getElementById('symptom-form').style.display = 'none';
-  } else {
-    document.getElementById('entry-form').style.display = 'none';
-    document.getElementById('symptom-form').style.display = 'block';
-    // Refresh symptom datetime
-    document.getElementById('symptom-datetime').value = getCurrentEasternForInput();
-  }
+  document.getElementById('entry-form').style.display = tab === 'entry' ? 'block' : 'none';
+  document.getElementById('medicine-form').style.display = tab === 'medicine' ? 'block' : 'none';
+  document.getElementById('symptom-form').style.display = tab === 'symptom' ? 'block' : 'none';
+
+  // Refresh datetime for the active tab
+  const now = getCurrentEasternForInput();
+  if (tab === 'symptom') document.getElementById('symptom-datetime').value = now;
+  if (tab === 'medicine') document.getElementById('medicine-datetime').value = now;
 }
 
 // --- Severity Selection ---
@@ -107,6 +123,61 @@ async function submitEntry(e) {
     showToast('Something went wrong. Please try again.', 'error');
   } finally {
     setSubmitting('entry', false);
+  }
+}
+
+// --- Submit Medicine ---
+async function submitMedicine(e) {
+  e.preventDefault();
+
+  const name = document.getElementById('medicine-name').value.trim();
+  let medicineName = document.getElementById('medicine-type').value;
+  const dose = document.getElementById('medicine-dose').value.trim();
+  const datetime = document.getElementById('medicine-datetime').value;
+  const notes = document.getElementById('medicine-notes').value.trim();
+
+  if (medicineName === 'other') {
+    medicineName = document.getElementById('medicine-other').value.trim();
+    if (!medicineName) {
+      showToast('Please specify the medicine name', 'error');
+      return;
+    }
+  }
+
+  if (!name || !medicineName || !datetime) {
+    showToast('Please fill in all required fields', 'error');
+    return;
+  }
+
+  localStorage.setItem('tracker_submitter_name', name);
+
+  const entryTimeISO = easternInputToISO(datetime);
+
+  setSubmitting('medicine', true);
+
+  try {
+    const db = await getSupabase();
+    const { error } = await db.from('entries').insert({
+      entry_time: entryTimeISO,
+      submitter_name: name,
+      entry_type: 'medicine',
+      item_name: medicineName,
+      portion_size: dose || null,
+      notes: notes || null
+    });
+
+    if (error) throw error;
+
+    showSuccess();
+    // Reset form but keep name, medicine type, and datetime
+    document.getElementById('medicine-dose').value = '';
+    document.getElementById('medicine-notes').value = '';
+    document.getElementById('medicine-datetime').value = getCurrentEasternForInput();
+  } catch (err) {
+    console.error('Submit error:', err);
+    showToast('Something went wrong. Please try again.', 'error');
+  } finally {
+    setSubmitting('medicine', false);
   }
 }
 
@@ -169,9 +240,9 @@ async function submitSymptom(e) {
 
 // --- UI Helpers ---
 function setSubmitting(formType, isSubmitting) {
-  const btn = document.getElementById(`btn-submit-${formType === 'entry' ? 'entry' : 'symptom'}`);
-  const text = document.getElementById(`${formType === 'entry' ? 'entry' : 'symptom'}-btn-text`);
-  const spinner = document.getElementById(`${formType === 'entry' ? 'entry' : 'symptom'}-spinner`);
+  const btn = document.getElementById(`btn-submit-${formType}`);
+  const text = document.getElementById(`${formType}-btn-text`);
+  const spinner = document.getElementById(`${formType}-spinner`);
 
   btn.disabled = isSubmitting;
   text.style.display = isSubmitting ? 'none' : 'inline';

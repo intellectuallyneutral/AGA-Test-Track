@@ -3,38 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="description" content="Log Isabelle's meals, drinks, and symptoms">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="description" content="Log Isabelle's meals, drinks, medicines, and symptoms">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>Isabelle's Food Tracker</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <meta name="theme-color" content="#3B82F6">
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/styles.css?v=2">
 </head>
 <body class="light-theme">
 
 <div class="page-container form-container">
-    <!-- Header -->
     <header class="app-header">
         <div class="logo">🍽️</div>
         <h1 class="title">Isabelle's Tracker</h1>
-        <p class="subtitle">Log food, drinks, or symptoms</p>
+        <p class="subtitle">Log food, drinks, medicine, or symptoms</p>
     </header>
 
-    <!-- Tab Toggle -->
     <div class="tab-group" role="tablist">
         <button class="tab-btn active" role="tab" data-tab="entry" id="tab-entry" onclick="switchTab('entry')">🍽️ Food / Drink</button>
+        <button class="tab-btn" role="tab" data-tab="medicine" id="tab-medicine" onclick="switchTab('medicine')">💊 Medicine</button>
         <button class="tab-btn" role="tab" data-tab="symptom" id="tab-symptom" onclick="switchTab('symptom')">🩺 Symptom</button>
     </div>
 
-    <!-- Food/Drink Form -->
     <form id="entry-form" class="card" onsubmit="submitEntry(event)">
         <div class="form-group">
             <label class="form-label" for="entry-name">Your Name</label>
             <input type="text" id="entry-name" class="form-input" placeholder="e.g. Mom, Dad, Grandma" required>
         </div>
-
         <div class="form-group">
             <label class="form-label">Food or Drink?</label>
             <div class="type-toggle">
@@ -44,12 +44,10 @@
                 <label for="type-drink">🧃 Drink</label>
             </div>
         </div>
-
         <div class="form-group">
             <label class="form-label" for="entry-item">What did Isabelle have?</label>
             <input type="text" id="entry-item" class="form-input" placeholder="e.g. Grilled chicken, Apple juice" required>
         </div>
-
         <div class="form-group">
             <label class="form-label" for="entry-portion">Portion Size <span style="font-weight:normal;color:var(--color-text-secondary)">(optional)</span></label>
             <select id="entry-portion" class="form-select">
@@ -62,31 +60,61 @@
                 <option value="full serving">Full serving</option>
             </select>
         </div>
-
         <div class="form-group">
             <label class="form-label" for="entry-datetime">Date &amp; Time (Eastern)</label>
             <input type="datetime-local" id="entry-datetime" class="form-input" required>
             <p class="form-hint">Auto-filled with current time. Change only if backlogging.</p>
         </div>
-
         <div class="form-group">
             <label class="form-label" for="entry-notes">Notes <span style="font-weight:normal;color:var(--color-text-secondary)">(optional)</span></label>
             <textarea id="entry-notes" class="form-textarea" placeholder="Any extra details..." rows="2"></textarea>
         </div>
-
         <button type="submit" class="btn-primary" id="btn-submit-entry">
             <span id="entry-btn-text">Submit Entry</span>
             <span id="entry-spinner" style="display:none;">Submitting...</span>
         </button>
     </form>
 
-    <!-- Symptom Form -->
+    <form id="medicine-form" class="card" style="display:none;" onsubmit="submitMedicine(event)">
+        <div class="form-group">
+            <label class="form-label" for="medicine-name">Your Name</label>
+            <input type="text" id="medicine-name" class="form-input" placeholder="e.g. Mom, Dad, Grandma" required>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="medicine-type">What medicine?</label>
+            <select id="medicine-type" class="form-select" required>
+                <option value="Famotidine">💊 Famotidine</option>
+                <option value="other">Other...</option>
+            </select>
+        </div>
+        <div class="form-group" id="medicine-other-group" style="display:none;">
+            <label class="form-label" for="medicine-other">Specify medicine</label>
+            <input type="text" id="medicine-other" class="form-input" placeholder="Name of the medicine">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="medicine-dose">Dose <span style="font-weight:normal;color:var(--color-text-secondary)">(optional)</span></label>
+            <input type="text" id="medicine-dose" class="form-input" placeholder="e.g. 10mg, 1 tablet">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="medicine-datetime">Date &amp; Time (Eastern)</label>
+            <input type="datetime-local" id="medicine-datetime" class="form-input" required>
+            <p class="form-hint">Auto-filled with current time. Change only if backlogging.</p>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="medicine-notes">Notes <span style="font-weight:normal;color:var(--color-text-secondary)">(optional)</span></label>
+            <textarea id="medicine-notes" class="form-textarea" placeholder="Any extra details..." rows="2"></textarea>
+        </div>
+        <button type="submit" class="btn-primary" id="btn-submit-medicine">
+            <span id="medicine-btn-text">Log Medicine</span>
+            <span id="medicine-spinner" style="display:none;">Submitting...</span>
+        </button>
+    </form>
+
     <form id="symptom-form" class="card" style="display:none;" onsubmit="submitSymptom(event)">
         <div class="form-group">
             <label class="form-label" for="symptom-name">Your Name</label>
             <input type="text" id="symptom-name" class="form-input" placeholder="e.g. Mom, Dad, Grandma" required>
         </div>
-
         <div class="form-group">
             <label class="form-label" for="symptom-type">What symptom?</label>
             <select id="symptom-type" class="form-select" required>
@@ -103,12 +131,10 @@
                 <option value="other">Other</option>
             </select>
         </div>
-
         <div class="form-group" id="symptom-other-group" style="display:none;">
             <label class="form-label" for="symptom-other">Describe the symptom</label>
             <input type="text" id="symptom-other" class="form-input" placeholder="What is she experiencing?">
         </div>
-
         <div class="form-group">
             <label class="form-label">How severe?</label>
             <div class="severity-selector">
@@ -118,18 +144,15 @@
             </div>
             <input type="hidden" id="symptom-severity" value="">
         </div>
-
         <div class="form-group">
             <label class="form-label" for="symptom-datetime">Date &amp; Time (Eastern)</label>
             <input type="datetime-local" id="symptom-datetime" class="form-input" required>
             <p class="form-hint">Auto-filled with current time. Change only if backlogging.</p>
         </div>
-
         <div class="form-group">
             <label class="form-label" for="symptom-notes">Notes <span style="font-weight:normal;color:var(--color-text-secondary)">(optional)</span></label>
             <textarea id="symptom-notes" class="form-textarea" placeholder="Any extra details..." rows="2"></textarea>
         </div>
-
         <button type="submit" class="btn-primary" id="btn-submit-symptom">
             <span id="symptom-btn-text">Submit Symptom</span>
             <span id="symptom-spinner" style="display:none;">Submitting...</span>
@@ -137,18 +160,16 @@
     </form>
 </div>
 
-<!-- Success Overlay -->
 <div class="success-overlay" id="success-overlay">
     <div class="checkmark">✅</div>
     <div class="message">Logged successfully!</div>
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js"></script>
-<script src="js/timezone.js"></script>
-<script src="js/form.js"></script>
+<script src="js/supabase-config.js?v=2"></script>
+<script src="js/timezone.js?v=2"></script>
+<script src="js/form.js?v=2"></script>
 </body>
 </html>
