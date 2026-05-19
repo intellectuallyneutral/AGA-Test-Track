@@ -1,0 +1,12 @@
+{
+  "name": "isabelle-weekly-report",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Weekly email report for Isabelle's Meal Tracker",
+  "scripts": {
+    "send": "node send-weekly-report.js"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.0"
+  }
+}
