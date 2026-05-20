@@ -9,7 +9,7 @@
     <meta name="description" content="Admin dashboard for Isabelle's meal, medicine, and symptom tracker">
     <title>Dashboard — Isabelle's Tracker</title>
     <meta name="theme-color" content="#3B82F6">
-    <link rel="stylesheet" href="css/styles.css?v=2">
+    <link rel="stylesheet" href="css/styles.css?v=3">
 </head>
 <body class="dark-theme">
 
@@ -60,30 +60,30 @@
             <button class="btn-export" onclick="exportPDF()">📄 Export PDF</button>
         </div>
 
-        <!-- Stats -->
+        <!-- Stats (clickable filters) -->
         <div class="stats-grid">
-            <div class="card stat-card">
+            <div class="card stat-card" data-filter="food" onclick="toggleFilter('food')" title="Click to filter by Foods">
                 <div class="icon meals">🍕</div>
                 <div>
                     <div class="value" id="stat-meals">0</div>
                     <p class="label">Foods</p>
                 </div>
             </div>
-            <div class="card stat-card">
+            <div class="card stat-card" data-filter="drink" onclick="toggleFilter('drink')" title="Click to filter by Drinks">
                 <div class="icon drinks">🥤</div>
                 <div>
                     <div class="value" id="stat-drinks">0</div>
                     <p class="label">Drinks</p>
                 </div>
             </div>
-            <div class="card stat-card">
+            <div class="card stat-card" data-filter="medicine" onclick="toggleFilter('medicine')" title="Click to filter by Medicines">
                 <div class="icon medicines">💊</div>
                 <div>
                     <div class="value" id="stat-medicines">0</div>
                     <p class="label">Medicines</p>
                 </div>
             </div>
-            <div class="card stat-card">
+            <div class="card stat-card" data-filter="symptom" onclick="toggleFilter('symptom')" title="Click to filter by Symptoms">
                 <div class="icon symptoms">🩺</div>
                 <div>
                     <div class="value" id="stat-symptoms">0</div>
@@ -97,6 +97,11 @@
                     <p class="label">Contributors</p>
                 </div>
             </div>
+        </div>
+
+        <!-- Clear Filters Button -->
+        <div style="text-align:center;margin:-8px 0 8px;">
+            <button class="btn-clear-filters" id="clear-filters-btn" style="display:none;" onclick="clearFilters()">✕ Clear Filters</button>
         </div>
 
         <!-- View Toggle -->
@@ -126,18 +131,36 @@
     </div>
 </div>
 
-<!-- Delete Bar -->
-<div class="delete-bar" id="delete-bar" style="display:none;">
-    <span id="delete-count">0 selected</span>
-    <button class="btn-delete" onclick="deleteSelected()">🗑️ Delete</button>
+<!-- Action Bar (Delete + Edit) -->
+<div class="action-bar" id="action-bar" style="display:none;">
+    <span id="action-count">0 selected</span>
+    <div class="action-buttons">
+        <button class="btn-edit" id="btn-edit" onclick="openEditModal()" disabled title="Select exactly 1 item to edit">✏️ Edit</button>
+        <button class="btn-delete" onclick="deleteSelected()">🗑️ Delete</button>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="edit-modal-overlay" id="edit-modal" style="display:none;" onclick="if(event.target===this)closeEditModal()">
+    <div class="edit-modal-content card">
+        <div class="edit-modal-header">
+            <h3>✏️ Edit Entry</h3>
+            <button class="edit-modal-close" onclick="closeEditModal()">✕</button>
+        </div>
+        <div id="edit-form"></div>
+        <div class="edit-modal-actions">
+            <button class="btn-secondary" onclick="closeEditModal()">Cancel</button>
+            <button class="btn-primary" onclick="saveEdit()">Save Changes</button>
+        </div>
+    </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<script src="js/supabase-config.js?v=2"></script>
-<script src="js/timezone.js?v=2"></script>
-<script src="js/dashboard.js?v=2"></script>
+<script src="js/supabase-config.js?v=3"></script>
+<script src="js/timezone.js?v=3"></script>
+<script src="js/dashboard.js?v=3"></script>
 </body>
 </html>
