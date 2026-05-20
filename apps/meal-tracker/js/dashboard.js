@@ -6,6 +6,7 @@ let allEntries = [];
 let allSymptoms = [];
 let currentView = 'timeline';
 let selectedItems = new Set();
+let activeFilters = new Set();
 
 function authenticate(e) {
   e.preventDefault();
@@ -65,7 +66,7 @@ async function loadData() {
     allEntries = entriesRes.data || [];
     allSymptoms = symptomsRes.data || [];
     selectedItems.clear();
-    updateDeleteBar();
+    updateActionBar();
     updateStats();
     renderTimeline();
     renderTable();
@@ -76,6 +77,54 @@ async function loadData() {
   } finally {
     document.getElementById('loading').style.display = 'none';
   }
+}
+
+// --- Stat Card Filtering ---
+function toggleFilter(category) {
+  if (activeFilters.has(category)) {
+    activeFilters.delete(category);
+  } else {
+    activeFilters.add(category);
+  }
+  updateFilterUI();
+  renderTimeline();
+  renderTable();
+}
+
+function clearFilters() {
+  activeFilters.clear();
+  updateFilterUI();
+  renderTimeline();
+  renderTable();
+}
+
+function updateFilterUI() {
+  const cards = document.querySelectorAll('.stat-card[data-filter]');
+  cards.forEach(card => {
+    const filter = card.getAttribute('data-filter');
+    if (activeFilters.size === 0) {
+      card.classList.remove('active');
+    } else {
+      card.classList.toggle('active', activeFilters.has(filter));
+    }
+  });
+  const clearBtn = document.getElementById('clear-filters-btn');
+  if (clearBtn) {
+    clearBtn.style.display = activeFilters.size > 0 ? 'inline-flex' : 'none';
+  }
+}
+
+function getFilteredItems() {
+  let entries = allEntries;
+  let symptoms = allSymptoms;
+  if (activeFilters.size > 0) {
+    entries = allEntries.filter(e => activeFilters.has(e.entry_type));
+    symptoms = activeFilters.has('symptom') ? allSymptoms : [];
+  }
+  return [
+    ...entries.map(e => ({ ...e, _type: 'entry', _time: e.entry_time })),
+    ...symptoms.map(s => ({ ...s, _type: 'symptom', _time: s.symptom_time }))
+  ].sort((a, b) => new Date(b._time) - new Date(a._time));
 }
 
 function updateStats() {
@@ -103,24 +152,34 @@ function toggleSelect(type, id) {
   const key = type + ':' + id;
   if (selectedItems.has(key)) selectedItems.delete(key);
   else selectedItems.add(key);
-  updateDeleteBar();
+  updateActionBar();
   const cb = document.querySelector(`input[data-key="${key}"]`);
   if (cb) cb.checked = selectedItems.has(key);
 }
 
 function selectAll() {
-  const allItems = [...allEntries.map(e => 'entry:' + e.id), ...allSymptoms.map(s => 'symptom:' + s.id)];
-  if (selectedItems.size === allItems.length) selectedItems.clear();
-  else allItems.forEach(k => selectedItems.add(k));
+  const items = getFilteredItems();
+  const allKeys = items.map(i => i._type + ':' + i.id);
+  if (selectedItems.size === allKeys.length) selectedItems.clear();
+  else allKeys.forEach(k => selectedItems.add(k));
   document.querySelectorAll('.item-checkbox').forEach(cb => { cb.checked = selectedItems.has(cb.dataset.key); });
-  updateDeleteBar();
+  updateActionBar();
 }
 
-function updateDeleteBar() {
-  const bar = document.getElementById('delete-bar');
+function updateActionBar() {
+  const bar = document.getElementById('action-bar');
   const count = selectedItems.size;
-  if (count > 0) { bar.style.display = 'flex'; document.getElementById('delete-count').textContent = count + ' selected'; }
-  else { bar.style.display = 'none'; }
+  if (count > 0) {
+    bar.style.display = 'flex';
+    document.getElementById('action-count').textContent = count + ' selected';
+    const editBtn = document.getElementById('btn-edit');
+    if (editBtn) {
+      editBtn.disabled = count !== 1;
+      editBtn.title = count === 1 ? 'Edit selected item' : 'Select exactly 1 item to edit';
+    }
+  } else {
+    bar.style.display = 'none';
+  }
 }
 
 async function deleteSelected() {
@@ -143,7 +202,7 @@ async function deleteSelected() {
     const errors = results.filter(r => r.error);
     if (errors.length > 0) throw new Error(errors.map(e => e.error.message).join(', '));
     selectedItems.clear();
-    updateDeleteBar();
+    updateActionBar();
     await loadData();
   } catch (err) {
     console.error('Delete error:', err);
@@ -151,14 +210,128 @@ async function deleteSelected() {
   }
 }
 
+// --- Edit Functionality ---
+function openEditModal() {
+  if (selectedItems.size !== 1) return;
+  const key = [...selectedItems][0];
+  const [type, id] = key.split(':');
+  const modal = document.getElementById('edit-modal');
+  const form = document.getElementById('edit-form');
+  if (type === 'entry') {
+    const item = allEntries.find(e => e.id === id);
+    if (!item) return;
+    form.innerHTML = `
+      <input type="hidden" id="edit-id" value="${item.id}">
+      <input type="hidden" id="edit-type" value="entry">
+      <div class="form-group">
+        <label class="form-label">Item Name</label>
+        <input type="text" id="edit-item-name" class="form-input" value="${escapeHtml(item.item_name)}" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Type</label>
+        <select id="edit-entry-type" class="form-select">
+          <option value="food" ${item.entry_type === 'food' ? 'selected' : ''}>Food</option>
+          <option value="drink" ${item.entry_type === 'drink' ? 'selected' : ''}>Drink</option>
+          <option value="medicine" ${item.entry_type === 'medicine' ? 'selected' : ''}>Medicine</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Portion / Dose</label>
+        <input type="text" id="edit-portion" class="form-input" value="${escapeHtml(item.portion_size || '')}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Submitter</label>
+        <input type="text" id="edit-submitter" class="form-input" value="${escapeHtml(item.submitter_name)}" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea id="edit-notes" class="form-textarea" rows="2">${escapeHtml(item.notes || '')}</textarea>
+      </div>`;
+  } else {
+    const item = allSymptoms.find(s => s.id === id);
+    if (!item) return;
+    form.innerHTML = `
+      <input type="hidden" id="edit-id" value="${item.id}">
+      <input type="hidden" id="edit-type" value="symptom">
+      <div class="form-group">
+        <label class="form-label">Symptom Type</label>
+        <input type="text" id="edit-symptom-type" class="form-input" value="${escapeHtml(item.symptom_type)}" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Severity</label>
+        <select id="edit-severity" class="form-select">
+          <option value="mild" ${item.severity === 'mild' ? 'selected' : ''}>Mild</option>
+          <option value="moderate" ${item.severity === 'moderate' ? 'selected' : ''}>Moderate</option>
+          <option value="severe" ${item.severity === 'severe' ? 'selected' : ''}>Severe</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Submitter</label>
+        <input type="text" id="edit-submitter" class="form-input" value="${escapeHtml(item.submitter_name)}" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea id="edit-notes" class="form-textarea" rows="2">${escapeHtml(item.notes || '')}</textarea>
+      </div>`;
+  }
+  modal.style.display = 'flex';
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').style.display = 'none';
+}
+
+async function saveEdit() {
+  const id = document.getElementById('edit-id').value;
+  const type = document.getElementById('edit-type').value;
+  const notes = document.getElementById('edit-notes').value.trim() || null;
+  const submitter = document.getElementById('edit-submitter').value.trim();
+  try {
+    const db = await getAdminSupabase();
+    let result;
+    if (type === 'entry') {
+      result = await db.from('entries').update({
+        item_name: document.getElementById('edit-item-name').value.trim(),
+        entry_type: document.getElementById('edit-entry-type').value,
+        portion_size: document.getElementById('edit-portion').value.trim() || null,
+        submitter_name: submitter,
+        notes: notes
+      }).eq('id', id);
+    } else {
+      result = await db.from('symptoms').update({
+        symptom_type: document.getElementById('edit-symptom-type').value.trim(),
+        severity: document.getElementById('edit-severity').value,
+        submitter_name: submitter,
+        notes: notes
+      }).eq('id', id);
+    }
+    if (result.error) throw result.error;
+    closeEditModal();
+    selectedItems.clear();
+    updateActionBar();
+    await loadData();
+    showToast('Entry updated successfully');
+  } catch (err) {
+    console.error('Edit error:', err);
+    alert('Failed to save: ' + err.message);
+  }
+}
+
+function showToast(message, type) {
+  type = type || 'success';
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.className = 'toast ' + type + ' visible';
+  setTimeout(function() { toast.classList.remove('visible'); }, 3000);
+}
+
+// --- Render Functions ---
 function renderTimeline() {
   const container = document.getElementById('timeline-container');
-  const items = [
-    ...allEntries.map(e => ({ ...e, _type: 'entry', _time: e.entry_time })),
-    ...allSymptoms.map(s => ({ ...s, _type: 'symptom', _time: s.symptom_time }))
-  ].sort((a, b) => new Date(b._time) - new Date(a._time));
+  const items = getFilteredItems();
   if (items.length === 0) {
-    container.innerHTML = '<div class="empty-state"><div class="icon">📭</div><h3>No entries yet</h3><p>Entries will appear here once family members start logging.</p></div>';
+    var msg = activeFilters.size > 0 ? 'No entries match the selected filter.' : 'No entries yet';
+    container.innerHTML = '<div class="empty-state"><div class="icon">📭</div><h3>' + msg + '</h3></div>';
     return;
   }
   const grouped = {};
@@ -177,9 +350,7 @@ function renderTimeline() {
       if (item._type === 'entry') {
         let typeEmoji, typeClass, mainClass = '';
         if (item.entry_type === 'medicine') {
-          typeEmoji = '💊';
-          typeClass = 'medicine';
-          mainClass = ' medicine-item';
+          typeEmoji = '💊'; typeClass = 'medicine'; mainClass = ' medicine-item';
         } else {
           typeEmoji = item.entry_type === 'food' ? '🍕' : '🥤';
           typeClass = item.entry_type;
@@ -226,12 +397,16 @@ function renderTimeline() {
 
 function renderTable() {
   const container = document.getElementById('table-container');
-  const items = [
-    ...allEntries.map(e => ({ id: e.id, _type: 'entry', time: e.entry_time, type: e.entry_type, name: e.item_name, detail: e.portion_size || '—', severity: '—', submitter: e.submitter_name, notes: e.notes || '' })),
-    ...allSymptoms.map(s => ({ id: s.id, _type: 'symptom', time: s.symptom_time, type: 'symptom', name: s.symptom_type, detail: '—', severity: s.severity, submitter: s.submitter_name, notes: s.notes || '' }))
-  ].sort((a, b) => new Date(b.time) - new Date(a.time));
+  const items = getFilteredItems().map(i => {
+    if (i._type === 'entry') {
+      return { id: i.id, _type: 'entry', time: i.entry_time, type: i.entry_type, name: i.item_name, detail: i.portion_size || '\u2014', severity: '\u2014', submitter: i.submitter_name, notes: i.notes || '' };
+    } else {
+      return { id: i.id, _type: 'symptom', time: i.symptom_time, type: 'symptom', name: i.symptom_type, detail: '\u2014', severity: i.severity, submitter: i.submitter_name, notes: i.notes || '' };
+    }
+  });
   if (items.length === 0) {
-    container.innerHTML = '<div class="empty-state"><div class="icon">📭</div><h3>No data</h3></div>';
+    var msg = activeFilters.size > 0 ? 'No entries match the selected filter.' : 'No data';
+    container.innerHTML = '<div class="empty-state"><div class="icon">📭</div><h3>' + msg + '</h3></div>';
     return;
   }
   let html = `<table class="data-table">
@@ -307,9 +482,9 @@ function exportPDF() {
   const start = document.getElementById('filter-start').value;
   const end = document.getElementById('filter-end').value;
   document.getElementById('print-date-range').textContent = `Report period: ${start} to ${end} · Generated ${new Date().toLocaleDateString('en-US')}`;
-  const deleteBar = document.getElementById('delete-bar');
+  const actionBar = document.getElementById('action-bar');
   const checkboxes = document.querySelectorAll('.item-select-label, .data-table th:first-child, .data-table td:first-child');
-  deleteBar.style.display = 'none';
+  actionBar.style.display = 'none';
   checkboxes.forEach(el => el.style.display = 'none');
   const element = document.getElementById('dashboard-content');
   const opt = {
@@ -322,7 +497,7 @@ function exportPDF() {
   };
   html2pdf().set(opt).from(element).save().then(function() {
     checkboxes.forEach(el => el.style.display = '');
-    updateDeleteBar();
+    updateActionBar();
   });
 }
 
