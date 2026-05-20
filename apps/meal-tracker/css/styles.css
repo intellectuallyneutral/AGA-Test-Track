@@ -1,6 +1,6 @@
 /*
  * Isabelle's Meal Tracker — Design System
- * Version: 2.0.0
+ * Version: 1.0.0
  */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -125,7 +125,6 @@ p { margin-bottom: calc(var(--space-unit) * 4); color: var(--color-text-secondar
     border-radius: var(--radius-input); font-family: var(--font-family-base);
     font-size: 1rem; color: var(--color-text-primary);
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-    box-sizing: border-box;
 }
 .form-input:focus, .form-select:focus, .form-textarea:focus {
     border-color: var(--color-primary); box-shadow: 0 0 0 3px hsla(var(--color-primary-hsl), 0.2); outline: none;
@@ -201,7 +200,7 @@ p { margin-bottom: calc(var(--space-unit) * 4); color: var(--color-text-secondar
 .password-modal .lock-icon { font-size: 3rem; margin-bottom: 16px; }
 .password-modal .form-group { text-align: left; }
 
-.stats-grid { display: grid; gap: calc(var(--space-unit) * 4); grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); margin-bottom: calc(var(--space-unit) * 8); }
+.stats-grid { display: grid; gap: calc(var(--space-unit) * 4); grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: calc(var(--space-unit) * 8); }
 .stat-card { display: flex; align-items: center; gap: calc(var(--space-unit) * 4); padding: calc(var(--space-unit) * 4); }
 .stat-card .icon {
     font-size: 1.5rem; width: 48px; height: 48px; display: grid; place-items: center;
@@ -324,7 +323,6 @@ p { margin-bottom: calc(var(--space-unit) * 4); color: var(--color-text-secondar
     .print-header { display: block !important; text-align: center; margin-bottom: 24px; }
     .print-header h1 { font-size: 18pt; margin-bottom: 4px; }
     .print-header p { color: #444; font-size: 10pt; }
-    .delete-bar, .item-select-label, .item-checkbox { display: none !important; }
 }
 .print-header { display: none; }
 
@@ -352,3 +350,79 @@ p { margin-bottom: calc(var(--space-unit) * 4); color: var(--color-text-secondar
     font-size: 0.9rem; transition: all var(--transition-fast);
 }
 .btn-delete:hover { background: rgba(255,255,255,0.35); }
+
+/* --- Clickable Stat Card Filters --- */
+.stat-card[data-filter] { cursor: pointer; transition: all var(--transition-fast); }
+.stat-card[data-filter]:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.stat-card[data-filter].active {
+    box-shadow: 0 0 0 3px var(--color-primary), var(--shadow-lg);
+    transform: translateY(-2px);
+}
+.stat-card[data-filter="food"].active { box-shadow: 0 0 0 3px hsl(var(--color-primary-hsl)), var(--shadow-lg); }
+.stat-card[data-filter="drink"].active { box-shadow: 0 0 0 3px hsl(var(--color-accent-hsl)), var(--shadow-lg); }
+.stat-card[data-filter="medicine"].active { box-shadow: 0 0 0 3px hsl(var(--color-medicine-hsl)), var(--shadow-lg); }
+.stat-card[data-filter="symptom"].active { box-shadow: 0 0 0 3px hsl(var(--color-danger-hsl)), var(--shadow-lg); }
+
+.btn-clear-filters {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 16px; border-radius: var(--radius-pill);
+    background: hsla(var(--color-danger-hsl), 0.15);
+    color: var(--color-danger); border: 1px solid hsla(var(--color-danger-hsl), 0.3);
+    cursor: pointer; font-family: var(--font-family-base);
+    font-weight: var(--font-weight-semibold); font-size: 0.8rem;
+    transition: all var(--transition-fast); animation: fadeIn 0.2s ease;
+}
+.btn-clear-filters:hover { background: hsla(var(--color-danger-hsl), 0.25); }
+
+/* --- Action Bar (Edit + Delete) --- */
+.action-bar {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(135deg, hsl(217, 33%, 20%), hsl(217, 33%, 28%));
+    color: white; padding: 12px 24px; border-radius: var(--radius-pill);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 1000;
+    display: flex; align-items: center; gap: 16px;
+    font-family: var(--font-family-base); font-weight: var(--font-weight-semibold);
+    animation: slideUp 0.3s ease; border: 1px solid hsla(0,0%,100%,0.15);
+}
+.action-buttons { display: flex; gap: 8px; }
+.btn-edit {
+    background: rgba(59,130,246,0.3); color: white; border: 1px solid rgba(59,130,246,0.5);
+    padding: 8px 20px; border-radius: var(--radius-pill); cursor: pointer;
+    font-family: var(--font-family-base); font-weight: var(--font-weight-semibold);
+    font-size: 0.9rem; transition: all var(--transition-fast);
+}
+.btn-edit:hover:not(:disabled) { background: rgba(59,130,246,0.5); }
+.btn-edit:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* --- Edit Modal --- */
+.edit-modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px); z-index: 1100;
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px; animation: fadeIn 0.2s ease;
+}
+.edit-modal-content {
+    width: 100%; max-width: 480px; max-height: 85vh; overflow-y: auto;
+    animation: slideUp 0.3s ease;
+}
+.edit-modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--color-border);
+}
+.edit-modal-header h3 { margin: 0; }
+.edit-modal-close {
+    background: none; border: none; color: var(--color-text-secondary);
+    font-size: 1.2rem; cursor: pointer; padding: 4px 8px;
+    border-radius: var(--radius-input); transition: all var(--transition-fast);
+}
+.edit-modal-close:hover { background: var(--color-bg); color: var(--color-text-primary); }
+.edit-modal-actions {
+    display: flex; gap: 12px; margin-top: 20px; padding-top: 16px;
+    border-top: 1px solid var(--color-border);
+}
+.edit-modal-actions .btn-secondary { flex: 1; min-height: 40px; }
+.edit-modal-actions .btn-primary { flex: 2; min-height: 40px; width: auto; }
+
+@media print {
+    .action-bar, .item-select-label, .item-checkbox, .btn-clear-filters, .edit-modal-overlay { display: none !important; }
+}
